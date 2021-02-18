@@ -3,6 +3,7 @@ import sys
 from settings import Settings
 from ship import Ship
 from bullet import Bullet
+from alien import Alien
 
 
 class AlienInvasion:
@@ -15,14 +16,18 @@ class AlienInvasion:
             (self.settings.screen_width, self.settings.screen_height))
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
+        self.aliens = pygame.sprite.Group()
         pygame.display.set_caption("Alien Invasion")
+
+        self._create_feel()  # tworzymy flote obcych
 
     def run_game(self):
         """Petla głowna gry"""
         while True:
             self._check_events()
             self.ship.update()
-            self._update_bullet()
+            self._update_bullets()
+            self._update_aliens()
             self._update_screen()
 
     def _check_events(self):
@@ -60,6 +65,7 @@ class AlienInvasion:
         self.ship.show()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
+        self.aliens.draw(self.screen)
         pygame.display.flip()  # odswieza ekran co petle
 
     def _fire_bullet(self):
@@ -69,13 +75,41 @@ class AlienInvasion:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
 
-    def _update_bullet(self):
+    def _update_bullets(self):
         """Pomocnicza sluzca do ukatualniania pociskow"""
         self.bullets.update()
         # Usuwamy pociski, ktore wyszly za ekran
         for bullet in self.bullets.copy():
             if bullet.rect.y <= 0:
                 self.bullets.remove(bullet)
+
+    def _create_feel(self):
+        """Pomocnicza tworzaca flote obcych"""
+        new_alien = Alien(self)
+        # Ustalenie ile obcych zmiesci sie w jednym wierszu
+        available_space_x = self.settings.screen_width - new_alien.rect.width
+        number_aliens_x = available_space_x // (2*new_alien.rect.width)
+        # Ustalenie liczby wierszy
+        available_space_y = self.settings.screen_height - 3*new_alien.rect.height - \
+            self.ship.rect.height
+        number_aliens_y = available_space_y // (2*new_alien.rect.height)
+        # Tworzenie obcych
+        for alien_number_y in range(number_aliens_y):
+            for alien_number_x in range(number_aliens_x):
+                self._create_alien(alien_number_x, alien_number_y)
+
+    def _create_alien(self, alien_number_x, alien_number_y):
+        """Pomocnicza tworzaca obcego"""
+        new_alien = Alien(self)
+        new_alien.x = new_alien.rect.width + 2 * new_alien.rect.width * alien_number_x
+        new_alien.rect.x = new_alien.x
+        new_alien.y = new_alien.rect.height + 2 * new_alien.rect.height * alien_number_y
+        new_alien.rect.y = new_alien.y
+        self.aliens.add(new_alien)
+
+    def _update_aliens(self):
+        """Pomocnicza sluzca do przesuwania floty"""
+        self.aliens.update()
 
 
 if __name__ == '__main__':
