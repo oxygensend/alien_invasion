@@ -9,7 +9,7 @@ class Button:
         self.screen_rect = ai_game.screen.get_rect()
 
         # Wymiary
-        self.width, self.height = 200, 80
+        self.width, self.height = 210, 80
         self.button_color = (21, 116, 0)
         self.text_color = (255, 255, 255)
         self.font = pygame.font.SysFont(None, 48)
@@ -31,3 +31,8 @@ class Button:
         """Metoda rysujaca przycisk z tekstem"""
         self.screen.fill(self.button_color, self.rect)
         self.screen.blit(self.msg_image, self.msg_image_rect)
+
+    def move_button(self, self2):
+        """Metoda umozliwiajaca przesuwanie przycisku"""
+        self.rect = pygame.Rect.move(self2.rect, 0, 82)
+        self.msg_image_rect.center = self.rect.center
