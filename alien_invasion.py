@@ -4,6 +4,9 @@ from settings import Settings
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+from time import sleep
+from game_stats import GameStats
+from button import Button
 
 
 class AlienInvasion:
@@ -14,6 +17,9 @@ class AlienInvasion:
         self.settings = Settings()
         self.screen = pygame.display.set_mode(
             (self.settings.screen_width, self.settings.screen_height))
+        self.play_button = Button("Play", self)
+        self.quit_button = Button("Quit", self)
+        self.stats = GameStats(self)
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
@@ -25,9 +31,12 @@ class AlienInvasion:
         """Petla głowna gry"""
         while True:
             self._check_events()
-            self.ship.update()
-            self._update_bullets()
-            self._update_aliens()
+
+            if self.stats.game_active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+
             self._update_screen()
 
     def _check_events(self):
@@ -36,10 +45,40 @@ class AlienInvasion:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self._check_button_play(pygame.mouse.get_pos())
+                self._check_button_quit(pygame.mouse.get_pos())
             elif event.type == pygame.KEYDOWN:
                 self._check_keydown_events(event)
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
+
+    def _check_button_play(self, mouse_pos):
+        """Metoda odpalajaca gre przez klikniecie"""
+        if self.play_button.rect.collidepoint(mouse_pos) and \
+                not self.stats.game_active:
+            self._start_game()
+
+    def _check_button_quit(self, mouse_pos):
+        """Metoda umożliwiajaca wyjscie z gry przez przycisk"""
+        if self.quit_button.rect.collidepoint(mouse_pos) and \
+                not self.stats.game_active:
+            sys.exit()
+
+    def _start_game(self):
+        """Metoda pozwalajaca na urchumienie gry"""
+        self.stats.reset_stats()
+        self.settings.reset_speed()
+        self.stats.game_active = True
+
+        self.aliens.empty()
+        self.bullets.empty()
+
+        self._create_feel()
+        self.ship.center_ship()
+
+        # ukrycie przycisku myszy
+        pygame.mouse.set_visible(False)
 
     def _check_keyup_events(self, event):
         """Reakcja na nacisniecia klawisza"""
@@ -58,6 +97,8 @@ class AlienInvasion:
             self._fire_bullet()
         elif event.key == pygame.K_ESCAPE:
             sys.exit()
+        elif event.key == pygame.K_g:
+            self._start_game()
 
     def _update_screen(self):
         """Pomocnicza metoda do metody run_game uakutalniajaca screen """
@@ -66,6 +107,15 @@ class AlienInvasion:
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
         self.aliens.draw(self.screen)
+
+        if not self.stats.game_active:
+            # Button - game
+            self.play_button.draw_msg()
+            # Button - quit
+            self.quit_button.rect = pygame.Rect.move(self.play_button.rect, 0, 82)
+            self.quit_button.msg_image_rect.center = self.quit_button.rect.center
+            self.quit_button.draw_msg()
+
         pygame.display.flip()  # odswieza ekran co petle
 
     def _fire_bullet(self):
@@ -82,6 +132,28 @@ class AlienInvasion:
         for bullet in self.bullets.copy():
             if bullet.rect.y <= 0:
                 self.bullets.remove(bullet)
+
+        self._check_bullet_alien_collisions()
+
+    def _check_bullet_alien_collisions(self):
+        """Pomocnicza sprawdzajaca kolizje floty z pociskami"""
+        # sprite.groupcollide(obiekt1ktorysiepokrywa, obiek2ktorysiepoktywa
+        # czy 1 ma zostac usuniety, czy 2 ma zostacusuniety)
+        # metoda sprawdza czy dane obiekty sie pokrywaja i zwraca slownik
+        # gdzie klucz to 1 argument wartosc 2
+        pygame.sprite.groupcollide(self.bullets,
+                                   self.aliens, True, True)
+        if not self.aliens:
+            self.bullets.empty()
+            self._create_feel()
+            self.settings.increase_speed()
+
+    def _check_screen_alien_collisions(self):
+        """Pomocnicza sprawdzajaca kolizje kosmity z krawedzia ekranu"""
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= self.screen.get_rect().bottom:
+                self._hit_ship()
+                break
 
     def _create_feel(self):
         """Pomocnicza tworzaca flote obcych"""
@@ -107,9 +179,42 @@ class AlienInvasion:
         new_alien.rect.y = new_alien.y
         self.aliens.add(new_alien)
 
+    def _change_fleet_direction(self):
+        """"Przesuwa cala linie floty w dol"""
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.settings.fleet_drop_speed
+        self.settings.fleet_direction *= -1
+
+    def _check_fleet_edge(self):
+        """Odpowiednia reakcja gdy flota dotrze do krawedzi"""
+        for alien in self.aliens.sprites():
+            if alien.check_edge():
+                self._change_fleet_direction()
+                break
+
     def _update_aliens(self):
         """Pomocnicza sluzca do przesuwania floty"""
+        self._check_fleet_edge()
         self.aliens.update()
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            self._hit_ship()
+
+        self._check_screen_alien_collisions()
+
+    def _hit_ship(self):
+        """Pomocnicza rozpoczyna gre od nowa gdy nastąpi kolizja
+            statku z kosmita """
+
+        if self.stats.ships_left > 1:
+            self.stats.ships_left -= 1
+            self.bullets.empty()
+            self.aliens.empty()
+            self._create_feel()
+            self.ship.center_ship()
+            sleep(1)
+        else:
+            self.stats.game_active = False
+            pygame.mouse.set_visible(True)
 
 
 if __name__ == '__main__':

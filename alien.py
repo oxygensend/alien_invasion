@@ -18,6 +18,12 @@ class Alien(Sprite):
 
         self.x = float(self.rect.x)
 
+    def check_edge(self):
+        """ Zwraca prawde jezeli kosmita znajdue sie na krawedzi ekranu """
+        if self.rect.left <= 0 or self.rect.right >= self.screen.get_rect().right:
+            return True
+
     def update(self):
-        self.x += self.settings.alien_speed
+        """Uaktualnia pozycja obcego w osi x """
+        self.x += self.settings.alien_speed * self.settings.fleet_direction
         self.rect.x = self.x

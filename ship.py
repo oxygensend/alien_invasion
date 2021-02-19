@@ -13,13 +13,11 @@ class Ship:
         self.image = pygame.image.load('alien_game/images/ship.bmp')
         self.rect = self.image.get_rect()  # pozycja obrazu
 
-        self.rect.midbottom = self.screen_rect.midbottom
+        self.center_ship()
 
         # Poruszanie sie w kierunkach
         self.moving_right = False
         self.moving_left = False
-
-        self.x = float(self.rect.x)
 
     def show(self):
         """Metoda wyswietlajaca statek"""
@@ -34,3 +32,8 @@ class Ship:
             self.x -= self.settings.ship_speed
 
         self.rect.x = self.x
+
+    def center_ship(self):
+        """Metoda wysrodkowujaca statek"""
+        self.rect.midbottom = self.screen_rect.midbottom
+        self.x = float(self.rect.x)
