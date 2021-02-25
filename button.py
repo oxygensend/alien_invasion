@@ -4,12 +4,12 @@ import pygame.font
 class Button:
     """Klasa sluzaca do budowy przycisku"""
 
-    def __init__(self, msg, ai_game):
+    def __init__(self, msg, ai_game, width, height):
         self.screen = ai_game.screen
         self.screen_rect = ai_game.screen.get_rect()
 
         # Wymiary
-        self.width, self.height = 210, 80
+        self.width, self.height = width, height
         self.button_color = (21, 116, 0)
         self.text_color = (255, 255, 255)
         self.font = pygame.font.SysFont(None, 48)

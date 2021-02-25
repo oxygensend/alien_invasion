@@ -1,5 +1,6 @@
 import pygame
 import sys
+import json
 from settings import Settings
 from ship import Ship
 from bullet import Bullet
@@ -7,6 +8,7 @@ from alien import Alien
 from time import sleep
 from game_stats import GameStats
 from button import Button
+from scoreboard import Scoreboard
 
 
 class AlienInvasion:
@@ -17,13 +19,15 @@ class AlienInvasion:
         self.settings = Settings()
         self.screen = pygame.display.set_mode(
             (self.settings.screen_width, self.settings.screen_height))
-        self.play_button = Button("Play", self)
-        self.quit_button = Button("Quit", self)
-        self.lvl_button = Button("Choose level", self)
-        self.easylvl_button = Button("Easy", self)
-        self.mediumlvl_button = Button("Medium", self)
-        self.hardlvl_button = Button("Hard", self)
+        self.play_button = Button("Play", self, 210, 80)
+        self.quit_button = Button("Quit", self, 210, 80)
+        self.lvl_button = Button("Choose level", self, 210, 80)
+        self.easylvl_button = Button("Easy", self, 210, 80)
+        self.mediumlvl_button = Button("Medium", self, 210, 80)
+        self.hardlvl_button = Button("Hard", self, 210, 80)
+        self.warning_button = Button("First choose level", self, 300, 120)
         self.stats = GameStats(self)
+        self.scoreboard = Scoreboard(self)
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
@@ -33,6 +37,7 @@ class AlienInvasion:
 
     def run_game(self):
         """Petla głowna gry"""
+
         while True:
             self._check_events()
 
@@ -48,9 +53,10 @@ class AlienInvasion:
             uzytkownika"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                sys.exit()
+                self._exit_game()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self._check_button_play(pygame.mouse.get_pos())
+                self._check_button_warning(pygame.mouse.get_pos())
                 self._check_button_quit(pygame.mouse.get_pos())
                 self._check_button_lvl(pygame.mouse.get_pos())
                 self._check_button_easylvl(pygame.mouse.get_pos())
@@ -61,57 +67,90 @@ class AlienInvasion:
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
 
+    def _exit_game(self):
+        """Metoda przygotowujaca gre do zamkniecia"""
+        with open('alien_game/high_score.json') as high_score_file:
+            score = json.load(high_score_file)
+            if score < self.stats.high_score:
+                json.dump(self.stats.high_score, high_score_file)
+
+        sys.exit()
+
     def _check_button_play(self, mouse_pos):
         """Metoda odpalajaca gre przez klikniecie"""
         if self.play_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and not self.stats.lvl_menu:
-            self._start_game()
+                not self.stats.game_active and not self.stats.lvl_menu \
+                and not self.stats.warning_menu:
+
+            if self.stats.lvl_choosen:
+                self._start_game()
+
+            else:
+                self.stats.warning_menu = True
 
     def _check_button_quit(self, mouse_pos):
         """Metoda umożliwiajaca wyjscie z gry przez przycisk"""
         if self.quit_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and not self.stats.lvl_menu:
-            sys.exit()
+                not self.stats.game_active and not self.stats.lvl_menu \
+                and not self.stats.warning_menu:
+            self._exit_game()
 
     def _check_button_lvl(self, mouse_pos):
         """Metoda umożliwajaca wybranie poziomu trudnosci"""
         if self.lvl_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and not self.stats.lvl_menu:
+                not self.stats.game_active and not self.stats.lvl_menu \
+                and not self.stats.warning_menu:
             self.stats.lvl_menu = True
 
     def _check_button_easylvl(self, mouse_pos):
         """Poziom łatwy"""
         if self.easylvl_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and self.stats.lvl_menu:
-            self.settings.increase_speed(1)
-            self.stats.lvl_menu = True
-            self.stats.game_active = True
+                not self.stats.game_active and self.stats.lvl_menu \
+                and not self.stats.warning_menu:
+
+            self.settings.reset_speed()
+            self.stats.lvl_menu = False
+            self.stats.lvl_choosen = True
 
     def _check_button_mediumlvl(self, mouse_pos):
         """Poziom sredni"""
         if self.mediumlvl_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and self.stats.lvl_menu:
+                not self.stats.game_active and self.stats.lvl_menu \
+                and not self.stats.warning_menu:
+            self.settings.reset_speed()
             self.settings.increase_speed(1.2)
-            self.stats.lvl_menu = True
-            self.stats.game_active = True
+            self.stats.lvl_menu = False
+            self.stats.lvl_choosen = True
 
     def _check_button_hardlvl(self, mouse_pos):
         """Poziom hard"""
         if self.hardlvl_button.rect.collidepoint(mouse_pos) and \
-                not self.stats.game_active and self.stats.lvl_menu:
+                not self.stats.game_active and self.stats.lvl_menu \
+                and not self.stats.warning_menu:
+            self.settings.reset_speed()
             self.settings.increase_speed(1.5)
-            self.stats.lvl_menu = True
-            self.stats.game_active = True
+            self.stats.lvl_menu = False
+            self.stats.lvl_choosen = True
+
+    def _check_button_warning(self, mouse_pos):
+        """Sprawdzenie przyskicku warnirnga"""
+        if self.warning_button.rect.collidepoint(mouse_pos) and \
+                not self.stats.game_active and not self.stats.lvl_menu \
+                and self.stats.warning_menu:
+            print('xd')
+            self.stats.warning_menu = False
 
     def _start_game(self):
         """Metoda pozwalajaca na urchumienie gry"""
+
         self.stats.reset_stats()
-        self.settings.reset_speed()
+        self.scoreboard.prep_score()
+        self.scoreboard.prep_level()
+        self.scoreboard.prep_high_score()
         self.stats.game_active = True
 
         self.aliens.empty()
         self.bullets.empty()
-
         self._create_feel()
         self.ship.center_ship()
         sleep(0.5)
@@ -142,9 +181,12 @@ class AlienInvasion:
         """Pomocnicza metoda do metody run_game uakutalniajaca screen """
         self.screen.fill(self.settings.background_color)
         self.ship.show()
+
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
         self.aliens.draw(self.screen)
+
+        self.scoreboard.show_score()
 
         self._menu()
 
@@ -152,7 +194,8 @@ class AlienInvasion:
 
     def _menu(self):
         """Metoda tworzace menu startowe gry"""
-        if not self.stats.game_active and not self.stats.lvl_menu:
+        if not self.stats.game_active and not self.stats.lvl_menu \
+                and not self.stats.warning_menu:
             self.screen.blit(self.settings.bg_image, self.settings.bg_image.get_rect())
             # Button - game
             self.play_button.draw_msg()
@@ -163,13 +206,19 @@ class AlienInvasion:
             self.quit_button.move_button(self.lvl_button)
             self.quit_button.draw_msg()
 
-        elif not self.stats.game_active and self.stats.lvl_menu:
+        elif not self.stats.game_active and self.stats.lvl_menu \
+                and not self.stats.warning_menu:
             self.screen.blit(self.settings.bg_image, self.settings.bg_image.get_rect())
             self.easylvl_button.draw_msg()
             self.mediumlvl_button.move_button(self.easylvl_button)
             self.mediumlvl_button.draw_msg()
             self.hardlvl_button.move_button(self.mediumlvl_button)
             self.hardlvl_button.draw_msg()
+
+        elif not self.stats.game_active and not self.stats.lvl_menu \
+                and self.stats.warning_menu:
+            self.screen.blit(self.settings.bg_image, self.settings.bg_image.get_rect())
+            self.warning_button.draw_msg()
 
     def _fire_bullet(self):
         """Pomocnicza sluzaca do wystrzeliwnew_bullet = Bullet(self)
@@ -194,12 +243,21 @@ class AlienInvasion:
         # czy 1 ma zostac usuniety, czy 2 ma zostacusuniety)
         # metoda sprawdza czy dane obiekty sie pokrywaja i zwraca slownik
         # gdzie klucz to 1 argument wartosc 2
-        pygame.sprite.groupcollide(self.bullets,
-                                   self.aliens, True, True)
+        collision = pygame.sprite.groupcollide(self.bullets,
+                                               self.aliens, True, True)
         if not self.aliens:
             self.bullets.empty()
             self._create_feel()
-            self.settings.increase_speed()
+            self.settings.increase_speed(speed_up=None, score_scale=1.5)
+
+            # inkrementacja numeru poziomu
+            self.stats.level += 1
+            self.scoreboard.prep_level()
+        if collision:
+            for aliens in collision.values():
+                self.stats.score += self.settings.alien_score * len(aliens)
+                self.scoreboard.prep_score()
+                self.scoreboard.check_high_score()
 
     def _check_screen_alien_collisions(self):
         """Pomocnicza sprawdzajaca kolizje kosmity z krawedzia ekranu"""
@@ -260,6 +318,7 @@ class AlienInvasion:
 
         if self.stats.ships_left > 1:
             self.stats.ships_left -= 1
+            self.scoreboard.prep_ships()
             self.bullets.empty()
             self.aliens.empty()
             self._create_feel()

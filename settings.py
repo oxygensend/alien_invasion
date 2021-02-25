@@ -25,7 +25,7 @@ class Settings:
         self.alien_speed = 1.0
         self.fleet_direction = 1  # 1 prawo -1 lewo
         self.fleet_drop_speed = 10  # predkosc z jaka obcy beda zmninieac rzad
-
+        self.alien_score = 50
         # zmienna zwiekszajaca poziom rozgrywki
         self.speedup_scale = 1.1
 
@@ -33,9 +33,11 @@ class Settings:
         self.bullet_speed = 1.5
         self.ship_speed = 1.5
         self.alien_speed = 1.0
+        self.alien_score = 50
 
-    def increase_speed(self, speed_up=None):
+    def increase_speed(self, speed_up=None, score_scale=1):
         speed_up = self.speedup_scale if speed_up is None else speed_up
         self.bullet_speed *= speed_up
         self.ship_speed *= speed_up
         self.alien_speed *= speed_up
+        self.alien_score = int(self.alien_score * score_scale)
